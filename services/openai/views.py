@@ -1,13 +1,7 @@
 import os
 import openai
 
-openai.api_key = "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"
-
-""" response = openai.ChatCompletion.create(
-    model="gpt-3.5-turbo",
-    messages=[{"role": "user", "content": "hello"}],
-    temperature=0.2,
-) """
+openai.api_key = "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"
 
 
 async def createChat(messages):

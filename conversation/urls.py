@@ -12,7 +12,12 @@ urlpattern = [
     ),
     path(
         "conversation/<str:id>",
-        ConversationView.as_view({"put": "put"}),
-        name="put",
+        ConversationView.as_view({"patch": "patch"}),
+        name="patch_name",
+    ),
+    path(
+        "conversation/<str:id>",
+        ConversationView.as_view({"delete": "delete"}),
+        name="delete",
     ),
 ]

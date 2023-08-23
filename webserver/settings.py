@@ -30,8 +30,8 @@ ALLOWED_HOSTS = [
     "127.0.0.1",
 ]
 
-CORS_ALLOW_ALL_ORIGINS = True
-
+CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOW_METHODS = ("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
 # Application definition
 
 INSTALLED_APPS = [
@@ -79,7 +79,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "webserver.wsgi.application"
-
+ASGI_APPLICATION = "webserver.asgi.application"
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
@@ -140,4 +140,3 @@ STATIC_URL = "static/"
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-ASGI_APPLICATION = "webserver.asgi.application"

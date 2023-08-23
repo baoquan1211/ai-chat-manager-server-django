@@ -10,6 +10,7 @@ class Conversation(models.Model):
     name = models.CharField(max_length=100, null=False, blank=False)
     messages = models.TextField(null=False, default="", blank=True)
     questions = models.TextField(null=False, default="", blank=True)
+    deleted_at = models.DateTimeField(null=True, default=None)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 

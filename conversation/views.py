@@ -1,6 +1,8 @@
+from datetime import datetime
 from rest_framework import response, status, viewsets
 from .models import Conversation
 from .serializers import ConversationSerializer
+from django.forms.models import model_to_dict
 
 
 class ConversationView(viewsets.ViewSet):
@@ -14,7 +16,7 @@ class ConversationView(viewsets.ViewSet):
             )
         try:
             conversation_serializer = ConversationSerializer(
-                Conversation.objects.all(), many=True
+                Conversation.objects.filter(deleted_at=None), many=True
             )
 
             conversations = conversation_serializer.data
@@ -37,7 +39,7 @@ class ConversationView(viewsets.ViewSet):
 
         try:
             conversation_serializer = ConversationSerializer(
-                Conversation.objects.get(id=id)
+                Conversation.objects.get(id=id, deleted_at=None)
             )
             print(conversation_serializer)
             conversation = conversation_serializer.data
@@ -47,11 +49,51 @@ class ConversationView(viewsets.ViewSet):
                 "Conversation is not found", status=status.HTTP_404_NOT_FOUND
             )
 
-    def put(self, request, id):
+    def patch(self, request, id):
         if request is None:
             return response.Response(
                 "Respose is not valid", status=status.HTTP_404_NOT_FOUND
             )
-        conversation = ConversationSerializer
-        print(request.GET.get("q", ""))
-        return response.Response(1)
+        new_name = request.GET.get("name", "")
+        if new_name == "":
+            return response.Response(
+                "New name is not valid", status=status.HTTP_400_BAD_REQUEST
+            )
+
+        conversation = Conversation.objects.get(id=id)
+        conversation.name = new_name
+
+        conversation_serializer = ConversationSerializer(
+            data=model_to_dict(conversation)
+        )
+
+        if conversation_serializer.is_valid() == False:
+            print(conversation_serializer.errors)
+            return response.Response(
+                "New name is not valid", status=status.HTTP_400_BAD_REQUEST
+            )
+        conversation.save()
+        return response.Response(
+            conversation_serializer.data, status=status.HTTP_200_OK
+        )
+
+    def delete(self, request, id):
+        if request is None:
+            return response.Response(
+                "Respose is not valid", status=status.HTTP_404_NOT_FOUND
+            )
+
+        conversation = Conversation.objects.get(id=id)
+        if conversation is None:
+            return response.Response(
+                "Conversation not found", status=status.HTTP_404_NOT_FOUND
+            )
+        try:
+            conversation.deleted_at = datetime.now()
+            conversation.save()
+            return response.Response(status=status.HTTP_204_NO_CONTENT)
+        except Exception as error:
+            return response.Response(
+                str(error),
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
