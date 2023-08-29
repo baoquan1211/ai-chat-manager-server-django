@@ -6,4 +6,4 @@ class WordsFilter(models.Model):
     key_words = models.TextField(blank=True, null=True)
 
     class Meta:
-        db_table = "app_words_filter"
+        db_table = "chat_words_filter"

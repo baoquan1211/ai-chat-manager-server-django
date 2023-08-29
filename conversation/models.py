@@ -1,5 +1,5 @@
 from django.db import models
-from django.contrib.auth.models import User
+from user.models import User
 from django.contrib.postgres.fields import ArrayField
 
 
@@ -16,4 +16,4 @@ class Conversation(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
-        db_table = "app_conversations"
+        db_table = "chat_conversations"

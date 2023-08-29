@@ -2,16 +2,12 @@ import os
 import socketio
 from services.openai.views import createChat
 from conversation.models import Conversation
-from django.contrib.auth.models import User
+from user.models import User
 import json
-import re
-from words_filter.models import WordsFilter
-from asgiref.sync import sync_to_async
+from .message_filter import message_filter
 
 os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
 
-
-basedir = os.path.dirname(os.path.realpath(__file__))
 sio = socketio.AsyncServer(
     cors_allowed_origins="*",
     ping_timeout=1000 * 60,
@@ -19,26 +15,6 @@ sio = socketio.AsyncServer(
     reconnection=True,
 )
 app = socketio.ASGIApp(sio)
-
-
-async def message_filter(message):
-    blocked_words = []
-    lower_message = message.lower()
-    splited_message = lower_message.split()
-    list_word_of_message = []
-    for word in splited_message:
-        word = word.replace(",", "")
-        word = word.replace(".", "")
-        list_word_of_message.append(word)
-
-    blocked_words = WordsFilter.objects.get()
-    blocked_words = json.loads(blocked_words.key_words)
-
-    founded_words = []
-    for word in blocked_words:
-        if word in list_word_of_message:
-            founded_words.append(word)
-    return founded_words
 
 
 @sio.event
@@ -50,6 +26,7 @@ async def ask_request(sid, data):
         await sio.emit("answer_request", "User not found")
         return
     user = User.objects.get(username=data["user"])
+
     try:
         if data.get("conversation") is None:
             conversation = Conversation(
@@ -79,13 +56,11 @@ async def ask_request(sid, data):
             response = await createChat(messages=questions)
             response = list(response.choices)[0]
             response = response.to_dict()["message"]
+        package = {
+            "conversation": conversation.id,
+            "response": response,
+        }
 
-        package = (
-            {
-                "conversation": conversation.id,
-                "response": response,
-            },
-        )
         messages.append(response)
         conversation.messages = json.dumps(messages)
         conversation.questions = json.dumps(questions)
@@ -93,10 +68,10 @@ async def ask_request(sid, data):
 
         await sio.emit("answer_request", package)
         print("server" ": replied successfully")
-    except Exception as error:
+    except:
         await sio.emit(
             "answer_request",
-            {error: str(error), conversation: data.get("conversation")},
+            {"error": "Something went wrong", conversation: data.get("conversation")},
         )
 
 

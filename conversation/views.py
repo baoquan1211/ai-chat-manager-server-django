@@ -3,11 +3,11 @@ from rest_framework import response, status, viewsets
 from .models import Conversation
 from .serializers import ConversationSerializer
 from django.forms.models import model_to_dict
+from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
 
 
 class ConversationView(viewsets.ViewSet):
-    """serializer_class = ConversationSerializer
-    queryset = Conversation.objects.all()"""
+    permission_classes = [IsAuthenticated]
 
     def list(self, request):
         if request is None:
@@ -16,10 +16,12 @@ class ConversationView(viewsets.ViewSet):
             )
         try:
             conversation_serializer = ConversationSerializer(
-                Conversation.objects.filter(deleted_at=None), many=True
+                Conversation.objects.filter(deleted_at=None, user_id=request._user.id),
+                many=True,
             )
 
             conversations = conversation_serializer.data
+
             if conversations:
                 return response.Response(conversations, status=status.HTTP_200_OK)
             else:
@@ -39,9 +41,10 @@ class ConversationView(viewsets.ViewSet):
 
         try:
             conversation_serializer = ConversationSerializer(
-                Conversation.objects.get(id=id, deleted_at=None)
+                Conversation.objects.get(
+                    id=id, deleted_at=None, user_id=request._user.id
+                )
             )
-            print(conversation_serializer)
             conversation = conversation_serializer.data
             return response.Response(conversation, status=status.HTTP_200_OK)
         except:
