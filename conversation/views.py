@@ -67,7 +67,7 @@ class ConversationView(viewsets.ViewSet):
         conversation.name = new_name
 
         conversation_serializer = ConversationSerializer(
-            data=model_to_dict(conversation)
+            conversation, data=model_to_dict(conversation)
         )
 
         if conversation_serializer.is_valid() == False:
@@ -75,7 +75,7 @@ class ConversationView(viewsets.ViewSet):
             return response.Response(
                 "New name is not valid", status=status.HTTP_400_BAD_REQUEST
             )
-        conversation.save()
+        conversation_serializer.save()
         return response.Response(
             conversation_serializer.data, status=status.HTTP_200_OK
         )

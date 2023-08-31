@@ -53,7 +53,7 @@ INSTALLED_APPS = [
     "conversation",
     "words_filter",
     "user",
-    "chat_provider",
+    "ai_platform",
 ]
 
 MIDDLEWARE = [

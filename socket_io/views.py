@@ -1,6 +1,8 @@
 import os
 import socketio
-from services.openai.views import createChat
+
+from services.openai.views import createChat as openai_chat
+from services.palm.views import createChat as palm_chat
 from conversation.models import Conversation
 from user.models import User
 import json
@@ -21,7 +23,7 @@ app = socketio.ASGIApp(sio)
 async def ask_request(sid, data):
     print(data.get("user", "undefined"), ": ", data["message"]["content"])
     messages = []
-    questions = []
+
     if data.get("user") is None:
         await sio.emit("answer_request", "User not found")
         return
@@ -34,16 +36,16 @@ async def ask_request(sid, data):
                 user_id=user,
                 provider_id=1,
                 messages=json.dumps(messages),
-                questions=json.dumps(questions),
+                # questions=json.dumps(questions),
             )
             conversation.save()
         else:
             conversation = Conversation.objects.get(id=data.get("conversation"))
             messages = json.loads(conversation.messages)
-            questions = json.loads(conversation.questions)
 
-        messages.append(data["message"])
-        questions.append(data["message"])
+            # questions = json.loads(conversation.questions)
+
+        # questions.append(data["message"])
         blocked_words = await message_filter(data["message"]["content"])
 
         if len(blocked_words) > 0:
@@ -53,9 +55,34 @@ async def ask_request(sid, data):
                 "blocked": True,
             }
         else:
-            response = await createChat(messages=questions)
-            response = list(response.choices)[0]
-            response = response.to_dict()["message"]
+            ai_platform = data.get("ai_platform", "openai")
+            if ai_platform == "openai":
+                prompt = []
+                for message in messages:
+                    if message["role"] == "user":
+                        prompt.append(message)
+                    else:
+                        prompt.append(
+                            {"role": "assistant", "content": message["content"]}
+                        )
+                messages.append(data["message"])
+                prompt.append(data["message"])
+                response = await openai_chat(messages=prompt)
+                response = list(response.choices)[0]
+                response = response.to_dict()["message"]["content"]
+                response = {"role": "openai", "content": response}
+
+            else:
+                messages.append(data["message"])
+                prompt = []
+                for message in messages:
+                    prompt.append(message["content"])
+                response = await palm_chat(messages=prompt)
+                print(response)
+                if response == None:
+                    response = "Sorry, I can't understand your request."
+                response = {"role": "palm", "content": response}
+
         package = {
             "conversation": conversation.id,
             "response": response,
@@ -63,7 +90,7 @@ async def ask_request(sid, data):
 
         messages.append(response)
         conversation.messages = json.dumps(messages)
-        conversation.questions = json.dumps(questions)
+        # conversation.questions = json.dumps(questions)
         conversation.save()
 
         await sio.emit("answer_request", package)

@@ -1,7 +1,7 @@
 import openai
-from chat_provider.models import ChatProvider
+from ai_platform.models import AIPlatform
 
-openai.api_key = ChatProvider.objects.get(name="OpenAI").key
+openai.api_key = "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"
 
 
 async def createChat(messages):
