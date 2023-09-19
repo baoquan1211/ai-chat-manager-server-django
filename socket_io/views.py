@@ -1,12 +1,11 @@
 import os
 import socketio
-
-from services.openai.views import createChat as openai_chat
-from services.palm.views import createChat as palm_chat
 from conversation.models import Conversation
 from user.models import User
 import json
 from .message_filter import message_filter
+from asgiref.sync import sync_to_async
+from ai_platform.views import OpenAI, PaLM
 
 os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
 
@@ -36,16 +35,11 @@ async def ask_request(sid, data):
                 user_id=user,
                 provider_id=1,
                 messages=json.dumps(messages),
-                # questions=json.dumps(questions),
             )
             conversation.save()
         else:
             conversation = Conversation.objects.get(id=data.get("conversation"))
             messages = json.loads(conversation.messages)
-
-            # questions = json.loads(conversation.questions)
-
-        # questions.append(data["message"])
         blocked_words = await message_filter(data["message"]["content"])
 
         if len(blocked_words) > 0:
@@ -56,32 +50,14 @@ async def ask_request(sid, data):
             }
         else:
             ai_platform = data.get("ai_platform", "openai")
+            messages.append(data["message"])
             if ai_platform == "openai":
-                prompt = []
-                for message in messages:
-                    if message["role"] == "user":
-                        prompt.append(message)
-                    else:
-                        prompt.append(
-                            {"role": "assistant", "content": message["content"]}
-                        )
-                messages.append(data["message"])
-                prompt.append(data["message"])
-                response = await openai_chat(messages=prompt)
-                response = list(response.choices)[0]
-                response = response.to_dict()["message"]["content"]
-                response = {"role": "openai", "content": response}
+                ai_platform = OpenAI()
+                response = await ai_platform.get_answer(messages)
 
-            else:
-                messages.append(data["message"])
-                prompt = []
-                for message in messages:
-                    prompt.append(message["content"])
-                response = await palm_chat(messages=prompt)
-                print(response)
-                if response == None:
-                    response = "Sorry, I can't understand your request."
-                response = {"role": "palm", "content": response}
+            elif ai_platform == "palm":
+                ai_platform = PaLM()
+                response = await ai_platform.get_answer(messages)
 
         package = {
             "conversation": conversation.id,
@@ -90,15 +66,15 @@ async def ask_request(sid, data):
 
         messages.append(response)
         conversation.messages = json.dumps(messages)
-        # conversation.questions = json.dumps(questions)
         conversation.save()
 
         await sio.emit("answer_request", package)
         print("server" ": replied successfully")
-    except:
+    except Exception as e:
+        print("error", e)
         await sio.emit(
             "answer_request",
-            {"error": "Something went wrong", conversation: data.get("conversation")},
+            {"error": "Something went wrong", "conversation": data.get("conversation")},
         )
 
 

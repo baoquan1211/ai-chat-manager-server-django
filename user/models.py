@@ -58,7 +58,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(_("email address"), unique=True)
     name = models.CharField(max_length=150, blank=True)
     role_id = models.ForeignKey(Role, on_delete=models.SET_NULL, null=True)
-    department_id = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True)
+    department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True)
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     create_at = models.DateTimeField(default=timezone.now, editable=False)
